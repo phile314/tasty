@@ -44,7 +44,7 @@ suiteOptionParser ins tree = optionParser $ suiteOptions ins tree
 -- ingredient list
 defaultMainWithIngredients :: [Ingredient] -> TestTree -> IO ()
 defaultMainWithIngredients ins testTree = do
-  opts <- execParser $
+  opts <- customExecParser (prefs $ columns 80) $
     info (helper <*> suiteOptionParser ins testTree)
     ( fullDesc <>
       header "Mmm... tasty test suite"
