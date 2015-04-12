@@ -20,6 +20,7 @@ module Test.Tasty.Options
   , safeRead
   ) where
 
+import Data.Maybe (fromJust)
 import Data.Typeable
 import qualified Data.Map as Map
 import Data.Map (Map)
@@ -72,7 +73,10 @@ class Typeable v => IsOption v where
       helpString = untag (optionHelp :: Tagged v String)
       parse = str >>=
         maybe (readerError $ "Could not parse " ++ name) pure <$> parseValue
-
+  -- | How to combine option values, if an option is given multiple times.
+  -- By default, later options override earlier ones.
+  optionCombine :: v -> v -> v
+  optionCombine _ x = x
 
 data OptionValue = forall v . IsOption v => OptionValue v
 
@@ -85,7 +89,11 @@ newtype OptionSet = OptionSet (Map TypeRep OptionValue)
 instance Monoid OptionSet where
   mempty = OptionSet mempty
   OptionSet a `mappend` OptionSet b =
-    OptionSet $ Map.unionWith (flip const) a b
+    OptionSet $ Map.unionWith f a b
+    where f :: OptionValue -> OptionValue -> OptionValue
+          -- the option type inside of both OptionValue's should be the same, as they have the same
+          -- TypeRep.
+          f (OptionValue x) (OptionValue y) = OptionValue $ x `optionCombine` (fromJust $ cast y)
 
 -- | Set the option value
 setOption :: IsOption v => v -> OptionSet -> OptionSet
